@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aditya's 8-Bit Portfolio</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Retro Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling */
+            background-color: #70c5ce; /* Sky blue */
+            font-family: 'Press Start 2P', cursive; /* 8-bit font */
+            touch-action: none; /* Prevent default touch actions on mobile */
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated; /* Crucial for sharp 8-bit look */
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; /* Let clicks pass through to canvas when hidden */
+            z-index: 10;
+        }
+
+        .ui-panel {
+            pointer-events: auto; /* Enable clicks on the panel itself */
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 4px solid #fff;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-width: 90%;
+        }
+
+        .pixel-btn {
+            background-color: #f6d03c;
+            border: 4px solid #000;
+            color: #000;
+            padding: 15px 20px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scanline effect overlay */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.1) 50%,
+                rgba(0,0,0,0.1)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="scanlines"></div>
+
+    <!-- UI Overlay System -->
+    <div id="ui-container" class="ui-layer">
+        
+        <!-- Start Screen -->
+        <div id="start-screen" class="ui-panel">
+            <h1 class="text-2xl md:text-4xl text-white mb-6 leading-relaxed text-yellow-300">Welcome to<br>Aditya's World</h1>
+            <p class="text-xs md:text-sm text-gray-200 mb-8 leading-loose">
+                Tap, Click, or Spacebar to fly.<br><br>
+                Avoid the green pillars.<br><br>
+                Collect clouds to explore portfolio sections.
+            </p>
+            <button id="start-btn" class="pixel-btn">START GAME</button>
+            <a href="https://drive.google.com/file/d/1tsXgMPH8pxMdtlWcB3FBlz5PPIQXFOQK/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="pixel-btn block !text-xs" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">WATCH VIDEO RESUME INSTEAD</a>
+        </div>
+
+        <!-- Section Unlocked Screen -->
+        <div id="pause-screen" class="ui-panel hidden">
+            <h2 id="section-title" class="text-xl md:text-2xl text-green-400 mb-4">SECTION FOUND!</h2>
+            <p class="text-xs text-white mb-6 leading-loose">
+                You collected a portfolio cloud.<br><br>
+                What would you like to do?
+            </p>
+            <div class="flex flex-col gap-4 w-full">
+                <!-- Real anchor tag to ensure a trusted click event -->
+                <a id="view-section-link" href="#" class="pixel-btn block w-full !mt-0 !mb-0 bg-blue-500 border-blue-700 text-white box-border text-center no-underline">VIEW SECTION</a>
+                <button id="resume-btn" class="pixel-btn w-full !mt-0 box-border">RESUME GAME</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="ui-panel hidden">
+            <h2 class="text-2xl md:text-4xl text-red-500 mb-4">CRASHED!</h2>
+            <p id="score-display" class="text-sm text-white mb-6">Score: 0</p>
+            <button id="restart-btn" class="pixel-btn">RESTART GAME</button>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on base canvas
+        
+        // UI Elements
+        const uiContainer = document.getElementById('ui-container');
+        const startScreen = document.getElementById('start-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const scoreDisplay = document.getElementById('score-display');
+
+        // Game Constants & Configuration
+        const GRAVITY = 0.4;
+        const FLAP_STRENGTH = -7;
+        const SCROLL_SPEED = 3;
+        const PIPE_WIDTH = 70;
+        const PIPE_GAP = 200;
+        const CLOUD_RADIUS = 30;
+        const PIPE_SPAWN_RATE = 220; // Increased distance between columns for breathing room
+        
+        const PORTFOLIO_SECTIONS = [
+            { name: "Education", id: "education" },
+            { name: "Work Experience", id: "experience" },
+            { name: "Athletics", id: "athletics" },
+            { name: "Projects", id: "creative" },
+            { name: "Skills", id: "skills" },
+            { name: "Contact", id: "contact" },
+            { name: "Resume", id: "resume", external: true, url: "https://docs.google.com/document/d/1eLqIUeWNAmaku40NTP27kYuph7aF53R05nPFQZVRn4k/edit?usp=sharing" }
+        ];
+
+        // Lookup map so we can reference sections by id
+        const SECTIONS_BY_ID = PORTFOLIO_SECTIONS.reduce((map, s) => {
+            map[s.id] = s;
+            return map;
+        }, {});
+
+        // Recurring order that section clouds are spawned in.
+        // "Skills" appears twice per cycle since it's evergreen; Resume and Contact are mixed in too.
+        const CLOUD_SEQUENCE = ["education", "skills", "creative", "athletics", "experience", "skills", "contact", "resume"];
+
+        // State Machine
+        let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
+        let frames = 0;
+        let score = 0;
+        let animationFrameId;
+        let sectionIndex = 0; // Cycles through CLOUD_SEQUENCE
+
+        // Scale factors to make it responsive
+        let scaleX = 1;
+        let scaleY = 1;
+
+        const bird = {
+            x: 50,
+            y: 150,
+            width: 34,
+            height: 24,
+            velocity: 0,
+            sprite: null, // Will hold offscreen canvas
+            
+            draw: function() {
+                if(this.sprite) {
+                    ctx.save();
+                    ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                    // Rotate based on velocity for that classic feel
+                    let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+                    ctx.rotate(rotation);
+                    ctx.drawImage(this.sprite, -this.width/2, -this.height/2, this.width, this.height);
+                    ctx.restore();
+                }
+            },
+            
+            update: function() {
+                this.velocity += GRAVITY;
+                this.y += this.velocity;
+
+                // Ceiling collision
+                if (this.y < 0) {
+                    this.y = 0;
+                    this.velocity = 0;
+                }
+            },
+            
+            flap: function() {
+                this.velocity = FLAP_STRENGTH;
+            }
+        };
+
+        const pipes = {
+            items: [],
+            sprite: null, // Top and bottom sprites
+
+            draw: function() {
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    
+                    // Draw top pipe
+                    ctx.drawImage(this.topSprite, p.x, p.y);
+                    
+                    // Draw bottom pipe
+                    ctx.drawImage(this.bottomSprite, p.x, p.y + p.height + PIPE_GAP);
+                }
+            },
+            
+            update: function() {
+                // Add new pipes
+                if (frames % PIPE_SPAWN_RATE === 0) { 
+                    // Determine random Y position for top pipe
+                    // It should be negative to hide the top part
+                    let maxYPos = -10;
+                    let minYPos = -this.topSprite.height + 50; 
+                    let yPos = Math.floor(Math.random() * (maxYPos - minYPos + 1) + minYPos);
+                    
+                    this.items.push({
+                        x: canvas.width,
+                        y: yPos,
+                        width: PIPE_WIDTH,
+                        height: this.topSprite.height,
+                        passed: false
+                    });
+
+                    // Spawn portfolio cloud(s) between this pillar and the last one.
+                    // Every gap gets at least 1 cloud; occasionally 2, per the recurring CLOUD_SEQUENCE order.
+                    let distToNextPillar = PIPE_SPAWN_RATE * SCROLL_SPEED;
+                    let cloudsToSpawn = Math.random() < 0.35 ? 2 : 1;
+
+                    // Safe vertical range for clouds, between ceiling and ground
+                    let minCloudY = 80;
+                    let maxCloudY = ground.y > 0 ? ground.y - 120 : window.innerHeight - 200;
+
+                    for (let n = 0; n < cloudsToSpawn; n++) {
+                        let sectionId = CLOUD_SEQUENCE[sectionIndex % CLOUD_SEQUENCE.length];
+                        let currentSection = SECTIONS_BY_ID[sectionId];
+                        sectionIndex++;
+
+                        // Spread multiple clouds evenly across the gap between pillars
+                        let segment = distToNextPillar / (cloudsToSpawn + 1);
+                        let randomOffsetX = segment * (n + 1) + (Math.random() * 30 - 15);
+
+                        let randomY = Math.floor(Math.random() * (maxCloudY - minCloudY + 1)) + minCloudY;
+
+                        clouds.items.push({
+                            x: canvas.width + randomOffsetX,
+                            y: randomY,
+                            width: 100,
+                            height: 60,
+                            data: currentSection,
+                            hit: false
+                        });
+                    }
+                }
+
+                // Move and remove pipes
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    p.x -= SCROLL_SPEED;
+
+                    // Score logic
+                    if (p.x + p.width < bird.x && !p.passed) {
+                        score++;
+                        p.passed = true;
+                    }
+
+                    // Collision detection
+                    // Top pipe
+                    if (bird.x + bird.width > p.x && bird.x < p.x + p.width && 
+                        bird.y < p.y + p.height) {
+                        triggerGameOver();
+                    }
+                    // Bottom pipe
+                    if (bird.x + bird.width > p.x && bird.x < p.x + p.width && 
+                        bird.y + bird.height > p.y + p.height + PIPE_GAP) {
+                        triggerGameOver();
+                    }
+
+                    // Remove off-screen pipes
+                    if (p.x + p.width < 0) {
+                        this.items.shift();
+                        i--;
+                    }
+                }
+            }
+        };
+
+        const clouds = {
+            items: [],
+            
+            draw: function() {
+                for (let i = 0; i < this.items.length; i++) {
+                    let c = this.items[i];
+                    if(c.hit) continue; // Don't draw if already collected
+
+                    ctx.save();
+                    // Bobbing effect
+                    let bobOffset = Math.sin(frames * 0.05 + i) * 5;
+                    ctx.translate(c.x, c.y + bobOffset);
+
+                    // Draw cloud shape (simple overlapping circles)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, CLOUD_RADIUS, 0, Math.PI * 2);
+                    ctx.arc(-28, 11, CLOUD_RADIUS * 0.8, 0, Math.PI * 2);
+                    ctx.arc(28, 11, CLOUD_RADIUS * 0.8, 0, Math.PI * 2);
+                    ctx.arc(-11, 23, CLOUD_RADIUS * 0.9, 0, Math.PI * 2);
+                    ctx.arc(11, 23, CLOUD_RADIUS * 0.9, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw Text
+                    ctx.fillStyle = '#000000';
+                    ctx.font = '10px "Press Start 2P"';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // Text wrapping simulation for longer names
+                    if(c.data.name.includes(" ")) {
+                        let parts = c.data.name.split(" ");
+                        ctx.fillText(parts[0], 0, -2);
+                        ctx.fillText(parts[1], 0, 10);
+                    } else {
+                        ctx.fillText(c.data.name, 0, 4);
+                    }
+                    
+                    ctx.restore();
+                }
+            },
+            
+            update: function() {
+                for (let i = 0; i < this.items.length; i++) {
+                    let c = this.items[i];
+                    c.x -= SCROLL_SPEED;
+
+                    // Collision logic (AABB roughly around the cloud)
+                    let hitBoxSize = CLOUD_RADIUS * 1.5; 
+                    if (!c.hit && 
+                        bird.x + bird.width > c.x - hitBoxSize && 
+                        bird.x < c.x + hitBoxSize && 
+                        bird.y + bird.height > c.y - hitBoxSize && 
+                        bird.y < c.y + hitBoxSize) {
+                        
+                        c.hit = true;
+                        triggerPortfolioSection(c.data);
+                    }
+
+                    if (c.x + 100 < 0) {
+                        this.items.shift();
+                        i--;
+                    }
+                }
+            }
+        };
+
+        const ground = {
+            y: 0, // Set in resize
+            height: 100, // Base height
+            sprite: null,
+            x: 0,
+            
+            draw: function() {
+                if(this.sprite) {
+                    ctx.drawImage(this.sprite, this.x, this.y, canvas.width, this.height);
+                    ctx.drawImage(this.sprite, this.x + canvas.width, this.y, canvas.width, this.height);
+                }
+            },
+            
+            update: function() {
+                this.x -= SCROLL_SPEED;
+                if (this.x <= -canvas.width) {
+                    this.x = 0;
+                }
+
+                // Ground Collision
+                if (bird.y + bird.height >= this.y) {
+                    bird.y = this.y - bird.height;
+                    triggerGameOver();
+                }
+            }
+        };
+
+        function generatePixelSprite(pixels, colorMap, scale = 2) {
+            let width = pixels[0].length * scale;
+            let height = pixels.length * scale;
+            
+            let offCanvas = document.createElement('canvas');
+            offCanvas.width = width;
+            offCanvas.height = height;
+            let oCtx = offCanvas.getContext('2d');
+            
+            for (let r = 0; r < pixels.length; r++) {
+                for (let c = 0; c < pixels[r].length; c++) {
+                    let colorKey = pixels[r][c];
+                    if (colorKey !== 0) {
+                        oCtx.fillStyle = colorMap[colorKey];
+                        oCtx.fillRect(c * scale, r * scale, scale, scale);
+                    }
+                }
+            }
+            return offCanvas;
+        }
+
+        function createAssets() {
+            // 1. Generate 8-bit Bird Sprite (Actual bird, not illustration of a person)
+            // 0=transparent, 1=black(outline), 2=yellow(body), 3=white(eye), 4=orange(beak), 5=red(wing)
+            const birdMatrix = [
+                [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
+                [0,0,0,1,1,2,2,2,2,2,1,1,1,0,0,0,0],
+                [0,0,1,2,2,2,2,2,2,2,3,3,1,1,0,0,0],
+                [0,1,2,2,2,2,2,2,2,2,3,1,3,1,0,0,0],
+                [0,1,2,2,2,2,2,2,2,2,3,3,3,1,0,0,0],
+                [1,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,0],
+                [1,2,2,2,2,2,1,1,1,1,2,2,2,4,4,4,1],
+                [1,2,2,2,2,1,5,5,5,5,1,2,2,2,4,4,1],
+                [1,2,2,2,1,5,5,5,5,5,5,1,2,2,2,1,0],
+                [0,1,2,2,1,5,5,1,1,5,5,1,2,2,1,0,0],
+                [0,0,1,2,2,1,1,0,0,1,1,2,2,1,0,0,0],
+                [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0,0],
+                [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0]
+            ];
+            
+            const birdColors = {
+                1: '#000000', 
+                2: '#FFD700', // Gold/Yellow
+                3: '#FFFFFF', 
+                4: '#FF8C00', // Orange Beak
+                5: '#FF4500'  // Red/Orange Wing
+            };
+            // Scale up from 2 to 2.3 for a roughly 15% increase
+            bird.sprite = generatePixelSprite(birdMatrix, birdColors, 2.3);
+            bird.width = bird.sprite.width;
+            bird.height = bird.sprite.height;
+
+            // 2. Generate Pipe Sprites
+            // Create a long vertical canvas for the pipe
+            let pipeLength = 600; // sufficiently long
+            let pipeCanvas = document.createElement('canvas');
+            pipeCanvas.width = PIPE_WIDTH;
+            pipeCanvas.height = pipeLength;
+            let pCtx = pipeCanvas.getContext('2d');
+            
+            // Pipe Body
+            pCtx.fillStyle = '#543847'; // dark outline color
+            pCtx.fillRect(0, 0, PIPE_WIDTH, pipeLength);
+            pCtx.fillStyle = '#73bf2e'; // Main green
+            pCtx.fillRect(4, 4, PIPE_WIDTH - 8, pipeLength - 8);
+            
+            // Highlights and shadows for 8-bit tubular look
+            pCtx.fillStyle = '#9cfa40'; // Highlight
+            pCtx.fillRect(8, 4, 10, pipeLength - 8);
+            pCtx.fillStyle = '#558d22'; // Shadow
+            pCtx.fillRect(PIPE_WIDTH - 18, 4, 10, pipeLength - 8);
+
+            // Pipe Lip (Top part)
+            let lipHeight = 30;
+            pCtx.fillStyle = '#543847';
+            pCtx.fillRect(0, 0, PIPE_WIDTH, lipHeight);
+            pCtx.fillStyle = '#73bf2e';
+            pCtx.fillRect(2, 2, PIPE_WIDTH - 4, lipHeight - 4);
+            pCtx.fillStyle = '#9cfa40'; 
+            pCtx.fillRect(6, 2, 10, lipHeight - 4);
+            pCtx.fillStyle = '#558d22'; 
+            pCtx.fillRect(PIPE_WIDTH - 16, 2, 10, lipHeight - 4);
+
+            // Bottom Pipe is just the above. Top pipe is flipped.
+            pipes.bottomSprite = pipeCanvas;
+            
+            // Flip for top sprite
+            let topPipeCanvas = document.createElement('canvas');
+            topPipeCanvas.width = PIPE_WIDTH;
+            topPipeCanvas.height = pipeLength;
+            let tpCtx = topPipeCanvas.getContext('2d');
+            tpCtx.translate(0, pipeLength);
+            tpCtx.scale(1, -1);
+            tpCtx.drawImage(pipeCanvas, 0, 0);
+            pipes.topSprite = topPipeCanvas;
+
+            // 3. Generate Ground Sprite
+            let gCanvas = document.createElement('canvas');
+            gCanvas.width = 1000; // Will be scaled
+            gCanvas.height = 100;
+            let gCtx = gCanvas.getContext('2d');
+            
+            // Dirt base
+            gCtx.fillStyle = '#ded895'; 
+            gCtx.fillRect(0, 0, gCanvas.width, gCanvas.height);
+            // Grass top
+            gCtx.fillStyle = '#73bf2e';
+            gCtx.fillRect(0, 0, gCanvas.width, 20);
+            // Dark outline
+            gCtx.fillStyle = '#543847';
+            gCtx.fillRect(0, 0, gCanvas.width, 4);
+
+            // Pixel specks in dirt
+            gCtx.fillStyle = '#c7bc6f';
+            for(let i=0; i<300; i++) {
+                let rx = Math.random() * gCanvas.width;
+                let ry = 20 + Math.random() * (gCanvas.height - 20);
+                gCtx.fillRect(rx, ry, 4, 4);
+            }
+            ground.sprite = gCanvas;
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ground.y = canvas.height - ground.height;
+            
+            // Adjust bird X position based on screen width
+            bird.x = Math.max(50, canvas.width * 0.1);
+            
+            // Draw background immediately if stopped
+            if(gameState !== 'PLAYING') draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            bird.update();
+            pipes.update();
+            clouds.update();
+            ground.update();
+            
+            frames++;
+        }
+
+        function draw() {
+            // Clear sky
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === 'START') return; // Handled by UI overlay
+
+            // Draw game elements
+            pipes.draw();
+            clouds.draw();
+            ground.draw();
+            bird.draw();
+
+            // Draw Score
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 4;
+            ctx.font = '30px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            let scoreStr = score.toString();
+            ctx.strokeText(scoreStr, canvas.width / 2, 50);
+            ctx.fillText(scoreStr, canvas.width / 2, 50);
+        }
+
+        function loop() {
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function initGame() {
+            bird.y = 150;
+            bird.velocity = 0;
+            pipes.items = [];
+            clouds.items = [];
+            
+            // Spawn the first cloud immediately for the user to grab
+            let currentSection = SECTIONS_BY_ID[CLOUD_SEQUENCE[0]];
+            clouds.items.push({
+                x: window.innerWidth * 0.8, // Start it towards the right side of the screen
+                y: window.innerHeight / 2 - 50, // Roughly vertically centered
+                width: 100,
+                height: 60,
+                data: currentSection,
+                hit: false
+            });
+            sectionIndex = 1; // Advance past the section we just used
+            
+            score = 0;
+            frames = 0;
+            gameState = 'PLAYING';
+            
+            hideAllUI();
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            scoreDisplay.innerText = "Score: " + score;
+            showUI(gameoverScreen);
+        }
+
+        function triggerPortfolioSection(sectionData) {
+            // Pause the game loop
+            gameState = 'PAUSED';
+            
+            // Update the UI dynamically based on the cloud hit
+            document.getElementById('section-title').innerText = sectionData.name.toUpperCase();
+            
+            // Set the actual anchor tag URL. 
+            // The user clicking this makes it a "Trusted Event", bypassing browser blocks!
+            let viewLink = document.getElementById('view-section-link');
+
+            if (sectionData.external) {
+                // Resume (and any other external link) opens in a new tab so the game stays open
+                viewLink.href = sectionData.url;
+                viewLink.target = '_blank';
+                viewLink.rel = 'noopener noreferrer';
+            } else {
+                viewLink.href = sectionData.id + '.html';
+                viewLink.removeAttribute('target');
+                viewLink.removeAttribute('rel');
+            }
+
+            viewLink.innerText = "OPEN " + sectionData.name.toUpperCase();
+
+            // Show pause UI 
+            showUI(pauseScreen);
+        }
+
+        function resumeGame() {
+            gameState = 'PLAYING';
+            hideAllUI();
+            
+            // Give bird a slight upward bump to prevent instant crash if resuming right before ground
+            bird.velocity = FLAP_STRENGTH * 0.5; 
+        }
+
+        function handleInput(e) {
+            // Prevent default behavior for spacebar and touch (prevents scrolling)
+            if (e.type === 'keydown' && e.code !== 'Space') return;
+            if (e.type === 'keydown') e.preventDefault();
+
+            if (gameState === 'PLAYING') {
+                bird.flap();
+            } else if (gameState === 'START') {
+                // If they click canvas instead of button
+                initGame();
+            } else if (gameState === 'GAMEOVER') {
+                initGame();
+            }
+        }
+
+        window.addEventListener('keydown', handleInput);
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', (e) => {
+            // Only prevent default if we are playing or starting, 
+            // allow default touch behavior in UI overlays so user can interact with inputs
+            if(gameState === 'PLAYING' || gameState === 'START') {
+                e.preventDefault(); 
+                handleInput(e);
+            }
+        }, { passive: false });
+
+        // Button Listeners
+        document.getElementById('start-btn').addEventListener('click', initGame);
+        document.getElementById('restart-btn').addEventListener('click', initGame);
+        document.getElementById('resume-btn').addEventListener('click', resumeGame);
+
+        // UI Helpers
+        function hideAllUI() {
+            startScreen.classList.add('hidden');
+            pauseScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+        }
+
+        function showUI(element) {
+            hideAllUI();
+            element.classList.remove('hidden');
+        }
+
+        window.onload = function() {
+            createAssets();
+            resizeCanvas();
+            showUI(startScreen);
+            
+            // Start the background loop early so the sky renders
+            requestAnimationFrame(loop);
+        };
+
+    </script>
+</body>
+</html>

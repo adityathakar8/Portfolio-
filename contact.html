@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Contact | Aditya's 8-Bit Portfolio</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+            background-color: #70c5ce;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        body {
+            background-image:
+                linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)),
+                repeating-linear-gradient(0deg, #70c5ce 0px, #70c5ce 2px, #66bcc6 2px, #66bcc6 4px);
+            padding: 24px 16px 64px;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.08));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .page-wrap {
+            max-width: 780px;
+            margin: 0 auto;
+        }
+
+        .pixel-panel {
+            background-color: rgba(0, 0, 0, 0.75);
+            border: 4px solid #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        .pixel-card {
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 3px solid #f6d03c;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .contact-icon {
+            font-size: 18px;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .contact-link {
+            color: #4ade80;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .contact-link:hover {
+            text-decoration: underline;
+        }
+
+        .pixel-btn {
+            background-color: #f6d03c;
+            border: 4px solid #000;
+            color: #000;
+            padding: 12px 18px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 13px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        h1, h2, h3 { line-height: 1.6; }
+        p, li { line-height: 1.9; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="page-wrap">
+        <div class="pixel-panel">
+            <a href="index.html" class="pixel-btn mb-6" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">&larr; BACK TO GAME</a>
+            <h1 class="text-xl md:text-3xl text-yellow-300 mt-6 mb-2">CONTACT</h1>
+            <p class="text-xs md:text-sm text-gray-200 mb-4">Ready to team up? Reach out through any of these channels.</p>
+        </div>
+
+        <div class="pixel-panel">
+            <div class="pixel-card">
+                <div class="contact-row mb-4">
+                    <span class="contact-icon">&#9993;</span>
+                    <a href="mailto:adityathakar8@gmail.com" class="contact-link text-gray-100">adityathakar8@gmail.com</a>
+                </div>
+                <div class="contact-row mb-4">
+                    <span class="contact-icon">&#128241;</span>
+                    <a href="tel:+917058349879" class="contact-link text-gray-100">+91 7058349879</a>
+                </div>
+                <div class="contact-row mb-4">
+                    <span class="contact-icon">in</span>
+                    <a href="https://www.linkedin.com/in/aditya-thakar-uf/" target="_blank" rel="noopener noreferrer" class="contact-link">linkedin.com/in/aditya-thakar-uf</a>
+                </div>
+                <div class="contact-row">
+                    <span class="contact-icon">&#127760;</span>
+                    <a href="index.html" class="contact-link text-gray-100">View this Portfolio</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-10">
+            <a href="index.html" class="pixel-btn" style="background-color:#f6d03c;">&larr; BACK TO GAME</a>
+        </div>
+    </div>
+</body>
+</html>

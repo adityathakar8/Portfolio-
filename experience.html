@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Work Experience | Aditya's 8-Bit Portfolio</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+            background-color: #70c5ce;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        body {
+            background-image:
+                linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.15)),
+                repeating-linear-gradient(0deg, #70c5ce 0px, #70c5ce 2px, #66bcc6 2px, #66bcc6 4px);
+            padding: 24px 16px 64px;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.08));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .page-wrap {
+            max-width: 780px;
+            margin: 0 auto;
+        }
+
+        .pixel-panel {
+            background-color: rgba(0, 0, 0, 0.75);
+            border: 4px solid #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        .pixel-card {
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 3px solid #f6d03c;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .pixel-btn {
+            background-color: #f6d03c;
+            border: 4px solid #000;
+            color: #000;
+            padding: 12px 18px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 13px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .pixel-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .pixel-tag {
+            display: inline-block;
+            background-color: #4ade80;
+            border: 2px solid #000;
+            color: #000;
+            font-size: 10px;
+            padding: 6px 10px;
+            margin: 4px 6px 4px 0;
+            border-radius: 4px;
+        }
+
+        h1, h2, h3 { line-height: 1.6; }
+        p, li { line-height: 1.9; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="page-wrap">
+        <div class="pixel-panel">
+            <a href="index.html" class="pixel-btn mb-6" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">&larr; BACK TO GAME</a>
+            <h1 class="text-xl md:text-3xl text-yellow-300 mt-6 mb-2">WORK EXPERIENCE</h1>
+            <p class="text-xs md:text-sm text-gray-200 mb-4">Quest log: roles, companies, and boss battles won.</p>
+        </div>
+
+        <div class="pixel-panel">
+            <div class="pixel-card">
+                <h2 class="text-sm md:text-base text-blue-300 mb-2">Supply Chain Analyst</h2>
+                <p class="text-gray-300 mb-1">University of Florida &middot; Gainesville, FL &middot; Jun 2025 &ndash; Present</p>
+                <ul class="text-gray-100 list-disc pl-5">
+                    <li>Reduced annual inventory holding costs by 42% (from $38,000 in 2024 to $22,000 in 2025) by developing a predictive demand model in Python that improved forecasting accuracy by 22%.</li>
+                    <li>Protected gross margins by 5% during peak seasons by analyzing historical seasonality trends and coordinating lead-time buffers with the logistics team to prevent stock-outs on Category A items.</li>
+                    <li>Saved $45,000 in distribution project costs on a $400,000 budget by identifying a 15% discrepancy in last-mile logistics spend and implementing an optimized re-routing strategy.</li>
+                </ul>
+            </div>
+            <div class="pixel-card">
+                <h2 class="text-sm md:text-base text-blue-300 mb-2">Operations Supervisor</h2>
+                <p class="text-gray-300 mb-1">UF Recreational Department &middot; University of Florida, Gainesville, FL &middot; Jan 2024 &ndash; May 2025</p>
+                <ul class="text-gray-100 list-disc pl-5">
+                    <li>Spearheaded floor operations for a 37,000 sq. ft. facility, leading and training 7 associates to deliver exceptional service for 50,000+ students and securing 50+ five-star Google reviews through improved customer engagement strategies.</li>
+                    <li>Managed end-to-end inventory using Fusion and Connect 2 ERP systems, maintaining PO records for high-value athletic equipment and streamlining procurement workflows to ensure 100% equipment availability for major competitive events.</li>
+                </ul>
+            </div>
+            <div class="pixel-card">
+                <h2 class="text-sm md:text-base text-blue-300 mb-2">Hypertrophy and Conditioning Coach</h2>
+                <p class="text-gray-300 mb-1">Swamp City Fitness &middot; Freelance &middot; Gainesville, FL (Hybrid) &middot; May 2025 &ndash; Jan 2026</p>
+                <ul class="text-gray-100 list-disc pl-5">
+                    <li>Coached clients in hypertrophy and conditioning, building periodized programs to reach peak physical performance.</li>
+                    <li>Mentored first-time runners to complete 5Ks and half-marathons, designing time-efficient plans around full-time work schedules.</li>
+                    <li>Led race prep for Spartan, half-marathon, and HYROX events with structured strength, engine, and skills cycles.</li>
+                    <li>Streamlined CrossFit gym operations by handling client profiling, delivering small-group training, and providing basic nutrition guidance.</li>
+                    <li>Guided sustainable fat-loss through habit coaching, macronutrient education, and accountability check-ins tailored to each client's routine.</li>
+                </ul>
+            </div>
+            <div class="pixel-card">
+                <h2 class="text-sm md:text-base text-blue-300 mb-2">Videographer &amp; Video Editor</h2>
+                <p class="text-gray-300 mb-1">Swamp City Fitness &middot; Freelance &middot; Gainesville, FL (On-site) &middot; May 2024 &ndash; Jul 2024</p>
+                <ul class="text-gray-100 list-disc pl-5">
+                    <li>Directed, filmed, and edited a high-impact brand video for Swamp City Fitness featured on their website, highlighting the gym's mission, values, and community.</li>
+                    <li>Conducted interviews with ownership and members to craft an authentic narrative around the facility's transformation and unique training atmosphere.</li>
+                    <li>Managed end-to-end production including scripting, shooting, sound design, editing, and delivery using professional gear and Adobe Premiere Pro.</li>
+                    <li>Initiated the collaboration with a no-cost teaser reel, which led to a paid engagement and laid the foundation for an ongoing creative partnership.</li>
+                    <li>Helped amplify local awareness and digital presence for the gym through visually engaging storytelling and consistent aesthetic branding.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-center mb-10">
+            <a href="index.html" class="pixel-btn" style="background-color:#f6d03c;">&larr; BACK TO GAME</a>
+        </div>
+    </div>
+</body>
+</html>
