@@ -109,7 +109,7 @@
         
         <!-- Start Screen -->
         <div id="start-screen" class="ui-panel">
-            <h1 class="text-2xl md:text-4xl text-white mb-6 leading-relaxed text-yellow-300">Welcome to<br>Aditya's World</h1>
+            <h1 class="text-2xl md:text-4xl text-white mb-6 leading-relaxed text-yellow-300">Welcome to<br>Aditya's Portfolio</h1>
             <p class="text-xs md:text-sm text-gray-200 mb-8 leading-loose">
                 Tap, Click, or Spacebar to fly.<br><br>
                 Avoid the green pillars.<br><br>
@@ -138,6 +138,7 @@
             <h2 class="text-2xl md:text-4xl text-red-500 mb-4">CRASHED!</h2>
             <p id="score-display" class="text-sm text-white mb-6">Score: 0</p>
             <button id="restart-btn" class="pixel-btn">RESTART GAME</button>
+            <button id="exit-btn" class="pixel-btn w-full !mt-0 box-border" style="background-color: #f87171; border-color: #b91c1c;">EXIT TO MAIN MENU</button>
         </div>
 
     </div>
@@ -596,6 +597,20 @@
             animationFrameId = requestAnimationFrame(loop);
         }
 
+        function exitToMenu() {
+            gameState = 'START';
+    
+            // Clear current pipes and clouds so the sky is empty
+            pipes.items = [];
+            clouds.items = [];
+    
+            // Reset bird visually
+            bird.y = 150;
+            bird.velocity = 0;
+    
+            showUI(startScreen);
+        }
+
         function initGame() {
             bird.y = 150;
             bird.velocity = 0;
@@ -693,6 +708,7 @@
         document.getElementById('start-btn').addEventListener('click', initGame);
         document.getElementById('restart-btn').addEventListener('click', initGame);
         document.getElementById('resume-btn').addEventListener('click', resumeGame);
+        document.getElementById('exit-btn').addEventListener('click', exitToMenu);
 
         // UI Helpers
         function hideAllUI() {
