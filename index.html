@@ -75,6 +75,52 @@
             box-shadow: 0px 0px 0px #000;
         }
 
+        .ai-terminal {
+            background-color: #000;
+            border: 4px solid #4ade80; /* Retro green border */
+            padding: 1.5rem;
+            text-align: left;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 1rem;
+        }
+
+        .ai-input {
+            width: 100%;
+            background-color: transparent;
+            border: none;
+            border-bottom: 2px solid #4ade80;
+            color: #4ade80;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            padding: 8px 0;
+            margin-bottom: 1rem;
+            outline: none;
+        }
+        
+        .ai-input::placeholder {
+            color: rgba(74, 222, 128, 0.5);
+        }
+
+        .ai-response {
+            color: #4ade80;
+            font-size: 10px;
+            line-height: 1.6;
+            min-height: 80px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .typing-cursor::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
         .hidden {
             display: none !important;
         }
@@ -113,10 +159,10 @@
             <p class="text-xs md:text-sm text-gray-200 mb-8 leading-loose">
                 Tap, Click, or Spacebar to fly.<br><br>
                 Avoid the green pillars.<br><br>
-                Collect clouds to explore portfolio sections.
+                Collect clouds for portfolio sections.<br>
+                <span class="text-yellow-400">Collect Golden Clouds for AI insights!</span>
             </p>
             <button id="start-btn" class="pixel-btn">START GAME</button>
-            <a href="https://drive.google.com/file/d/1tsXgMPH8pxMdtlWcB3FBlz5PPIQXFOQK/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="pixel-btn block !text-xs" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">WATCH VIDEO RESUME INSTEAD</a>
         </div>
 
         <!-- Section Unlocked Screen -->
@@ -133,11 +179,33 @@
             </div>
         </div>
 
+        <!-- AI Assistant Screen -->
+        <div id="ai-screen" class="ui-panel hidden">
+            <h2 class="text-xl md:text-2xl text-yellow-400 mb-4">WISDOM UNLOCKED</h2>
+            <p class="text-xs text-white mb-2 leading-loose">
+                Ask my AI assistant a question about my skills or experience.
+            </p>
+            
+            <div class="ai-terminal">
+                <div class="flex items-center mb-2">
+                    <span class="text-green-400 text-xs mr-2">&gt;</span>
+                    <input type="text" id="ai-query-input" class="ai-input" placeholder="e.g. What are his top skills?" autocomplete="off">
+                </div>
+                <button id="ask-ai-btn" class="pixel-btn w-full !text-xs !py-2 !mt-0 mb-4 bg-green-500 border-green-700">ASK GEMINI</button>
+                <div id="ai-output" class="ai-response typing-cursor">Awaiting input...</div>
+            </div>
+
+            <button id="close-ai-btn" class="pixel-btn mt-4">RESUME GAME</button>
+        </div>
+
         <!-- Game Over Screen -->
         <div id="gameover-screen" class="ui-panel hidden">
             <h2 class="text-2xl md:text-4xl text-red-500 mb-4">CRASHED!</h2>
             <p id="score-display" class="text-sm text-white mb-6">Score: 0</p>
-            <button id="restart-btn" class="pixel-btn">RESTART GAME</button>
+            <div class="flex flex-col gap-4 w-full">
+                <button id="restart-btn" class="pixel-btn w-full !mt-0 box-border">RESTART GAME</button>
+                <button id="exit-btn" class="pixel-btn w-full !mt-0 box-border" style="background-color: #f87171; border-color: #b91c1c;">EXIT TO MAIN MENU</button>
+            </div>
         </div>
 
     </div>
@@ -152,6 +220,12 @@
         const pauseScreen = document.getElementById('pause-screen');
         const gameoverScreen = document.getElementById('gameover-screen');
         const scoreDisplay = document.getElementById('score-display');
+        
+        const aiScreen = document.getElementById('ai-screen');
+        const aiQueryInput = document.getElementById('ai-query-input');
+        const askAiBtn = document.getElementById('ask-ai-btn');
+        const aiOutput = document.getElementById('ai-output');
+        const closeAiBtn = document.getElementById('close-ai-btn');
 
         // Game Constants & Configuration
         const GRAVITY = 0.4;
@@ -166,32 +240,29 @@
             { name: "Education", id: "education" },
             { name: "Work Experience", id: "experience" },
             { name: "Athletics", id: "athletics" },
-            { name: "Projects", id: "creative" },
-            { name: "Skills", id: "skills" },
-            { name: "Contact", id: "contact" },
-            { name: "Resume", id: "resume", external: true, url: "https://docs.google.com/document/d/1eLqIUeWNAmaku40NTP27kYuph7aF53R05nPFQZVRn4k/edit?usp=sharing" }
+            { name: "Creative", id: "creative" },
+            { name: "Skills", id: "skills" }
         ];
-
-        // Lookup map so we can reference sections by id
-        const SECTIONS_BY_ID = PORTFOLIO_SECTIONS.reduce((map, s) => {
-            map[s.id] = s;
-            return map;
-        }, {});
-
-        // Recurring order that section clouds are spawned in.
-        // "Skills" appears twice per cycle since it's evergreen; Resume and Contact are mixed in too.
-        const CLOUD_SEQUENCE = ["education", "skills", "creative", "athletics", "experience", "skills", "contact", "resume"];
 
         // State Machine
         let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
         let frames = 0;
         let score = 0;
         let animationFrameId;
-        let sectionIndex = 0; // Cycles through CLOUD_SEQUENCE
+        let sectionIndex = 0; // Cycles through portfolio sections
 
         // Scale factors to make it responsive
         let scaleX = 1;
         let scaleY = 1;
+        
+        // Gemini API Configuration
+        const GEMINI_API_KEY = ""; // Provided securely by the Canvas environment
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+        const AI_SYSTEM_PROMPT = `You are a helpful, professional AI assistant built into Aditya's 8-bit retro portfolio game. 
+You answer questions about Aditya's professional profile on his behalf. 
+Keep your answers extremely concise (max 2-3 short sentences) so they fit inside a small retro terminal window. 
+Adopt a slightly fun, retro-gaming tone but remain highly professional regarding his qualifications. 
+Assume Aditya is a highly skilled developer/engineer.`;
 
         const bird = {
             x: 50,
@@ -262,34 +333,36 @@
                         passed: false
                     });
 
-                    // Spawn portfolio cloud(s) between this pillar and the last one.
-                    // Every gap gets at least 1 cloud; occasionally 2, per the recurring CLOUD_SEQUENCE order.
-                    let distToNextPillar = PIPE_SPAWN_RATE * SCROLL_SPEED;
-                    let cloudsToSpawn = Math.random() < 0.35 ? 2 : 1;
-
-                    // Safe vertical range for clouds, between ceiling and ground
-                    let minCloudY = 80;
-                    let maxCloudY = ground.y > 0 ? ground.y - 120 : window.innerHeight - 200;
-
-                    for (let n = 0; n < cloudsToSpawn; n++) {
-                        let sectionId = CLOUD_SEQUENCE[sectionIndex % CLOUD_SEQUENCE.length];
-                        let currentSection = SECTIONS_BY_ID[sectionId];
-                        sectionIndex++;
-
-                        // Spread multiple clouds evenly across the gap between pillars
-                        let segment = distToNextPillar / (cloudsToSpawn + 1);
-                        let randomOffsetX = segment * (n + 1) + (Math.random() * 30 - 15);
-
+                    // Spawn a portfolio cloud horizontally between pillars
+                    if (this.items.length % 2 === 0) {
+                        let currentSection = PORTFOLIO_SECTIONS[sectionIndex % PORTFOLIO_SECTIONS.length];
+                        
+                        // Calculate distance to the next pillar
+                        let distToNextPillar = PIPE_SPAWN_RATE * SCROLL_SPEED;
+                        // Place cloud randomly between 30% and 70% of the space between pillars
+                        let randomOffsetX = Math.floor(Math.random() * (distToNextPillar * 0.4)) + (distToNextPillar * 0.3);
+                        
+                        // Place cloud at a random height, safely between ceiling and ground
+                        let minCloudY = 80;
+                        let maxCloudY = ground.y > 0 ? ground.y - 120 : window.innerHeight - 200; 
                         let randomY = Math.floor(Math.random() * (maxCloudY - minCloudY + 1)) + minCloudY;
+
+                        // Every 3rd cloud is an AI Wisdom Cloud
+                        let isWisdomCloud = (sectionIndex > 0 && sectionIndex % 3 === 0);
 
                         clouds.items.push({
                             x: canvas.width + randomOffsetX,
-                            y: randomY,
+                            y: randomY, 
                             width: 100,
                             height: 60,
-                            data: currentSection,
-                            hit: false
+                            data: isWisdomCloud ? { type: 'ai' } : currentSection,
+                            hit: false,
+                            isWisdom: isWisdomCloud
                         });
+                        
+                        if(!isWisdomCloud) {
+                            sectionIndex++;
+                        }
                     }
                 }
 
@@ -338,8 +411,9 @@
                     let bobOffset = Math.sin(frames * 0.05 + i) * 5;
                     ctx.translate(c.x, c.y + bobOffset);
 
-                    // Draw cloud shape (simple overlapping circles)
-                    ctx.fillStyle = '#FFFFFF';
+                    // Draw cloud shapes (simple overlapping circles)
+                    // Normal clouds are white, Wisdom clouds are golden/yellow
+                    ctx.fillStyle = c.isWisdom ? '#fbbf24' : '#FFFFFF';
                     ctx.beginPath();
                     ctx.arc(0, 0, CLOUD_RADIUS, 0, Math.PI * 2);
                     ctx.arc(-28, 11, CLOUD_RADIUS * 0.8, 0, Math.PI * 2);
@@ -347,20 +421,31 @@
                     ctx.arc(-11, 23, CLOUD_RADIUS * 0.9, 0, Math.PI * 2);
                     ctx.arc(11, 23, CLOUD_RADIUS * 0.9, 0, Math.PI * 2);
                     ctx.fill();
+                    
+                    // Add a slight glow effect for Wisdom clouds
+                    if(c.isWisdom) {
+                        ctx.strokeStyle = '#f59e0b';
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
 
                     // Draw Text
                     ctx.fillStyle = '#000000';
                     ctx.font = '10px "Press Start 2P"';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-
-                    // Text wrapping simulation for longer names
-                    if(c.data.name.includes(" ")) {
-                        let parts = c.data.name.split(" ");
-                        ctx.fillText(parts[0], 0, -2);
-                        ctx.fillText(parts[1], 0, 10);
+                    
+                    if (c.isWisdom) {
+                        ctx.fillText("ASK AI", 0, 4);
                     } else {
-                        ctx.fillText(c.data.name, 0, 4);
+                        // Text wrapping simulation for longer names
+                        if(c.data.name.includes(" ")) {
+                            let parts = c.data.name.split(" ");
+                            ctx.fillText(parts[0], 0, -2);
+                            ctx.fillText(parts[1], 0, 10);
+                        } else {
+                            ctx.fillText(c.data.name, 0, 4);
+                        }
                     }
                     
                     ctx.restore();
@@ -381,7 +466,12 @@
                         bird.y < c.y + hitBoxSize) {
                         
                         c.hit = true;
-                        triggerPortfolioSection(c.data);
+                        
+                        if (c.isWisdom) {
+                            triggerAIScreen();
+                        } else {
+                            triggerPortfolioSection(c.data);
+                        }
                     }
 
                     if (c.x + 100 < 0) {
@@ -603,16 +693,17 @@
             clouds.items = [];
             
             // Spawn the first cloud immediately for the user to grab
-            let currentSection = SECTIONS_BY_ID[CLOUD_SEQUENCE[0]];
+            let currentSection = PORTFOLIO_SECTIONS[0];
             clouds.items.push({
                 x: window.innerWidth * 0.8, // Start it towards the right side of the screen
                 y: window.innerHeight / 2 - 50, // Roughly vertically centered
                 width: 100,
                 height: 60,
                 data: currentSection,
-                hit: false
+                hit: false,
+                isWisdom: false
             });
-            sectionIndex = 1; // Advance past the section we just used
+            sectionIndex = 1; // Increment since we used the first section
             
             score = 0;
             frames = 0;
@@ -626,6 +717,20 @@
             scoreDisplay.innerText = "Score: " + score;
             showUI(gameoverScreen);
         }
+        
+        function exitToMenu() {
+            gameState = 'START';
+            
+            // Clear current pipes and clouds so the sky is empty
+            pipes.items = [];
+            clouds.items = [];
+            
+            // Reset bird visually
+            bird.y = 150;
+            bird.velocity = 0;
+            
+            showUI(startScreen);
+        }
 
         function triggerPortfolioSection(sectionData) {
             // Pause the game loop
@@ -637,22 +742,100 @@
             // Set the actual anchor tag URL. 
             // The user clicking this makes it a "Trusted Event", bypassing browser blocks!
             let viewLink = document.getElementById('view-section-link');
-
-            if (sectionData.external) {
-                // Resume (and any other external link) opens in a new tab so the game stays open
-                viewLink.href = sectionData.url;
-                viewLink.target = '_blank';
-                viewLink.rel = 'noopener noreferrer';
-            } else {
-                viewLink.href = sectionData.id + '.html';
-                viewLink.removeAttribute('target');
-                viewLink.removeAttribute('rel');
-            }
-
+            viewLink.href = sectionData.id + '.html';
             viewLink.innerText = "OPEN " + sectionData.name.toUpperCase();
 
             // Show pause UI 
             showUI(pauseScreen);
+        }
+
+        function triggerAIScreen() {
+            gameState = 'PAUSED';
+            aiQueryInput.value = '';
+            aiOutput.innerText = 'Awaiting input...';
+            showUI(aiScreen);
+            
+            // Auto focus input for convenience (might not work perfectly on all mobile browsers within an iframe)
+            setTimeout(() => aiQueryInput.focus(), 100);
+        }
+
+        async function fetchGeminiResponse() {
+            const query = aiQueryInput.value.trim();
+            if (!query) return;
+
+            // UI Feedback
+            askAiBtn.disabled = true;
+            askAiBtn.innerText = 'THINKING...';
+            aiOutput.innerText = 'Connecting to main server...';
+
+            const payload = {
+                contents: [{ parts: [{ text: query }] }],
+                systemInstruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
+            };
+
+            try {
+                // Implement exponential backoff for the API call (simple version for this demo)
+                let response;
+                let retries = 3;
+                let delay = 1000;
+
+                while (retries > 0) {
+                    try {
+                        response = await fetch(GEMINI_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok) break; // Success
+                        
+                        if (response.status === 429) { // Too Many Requests
+                            await new Promise(r => setTimeout(r, delay));
+                            delay *= 2; // Exponential backoff
+                            retries--;
+                        } else {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                    } catch (fetchError) {
+                        if (retries <= 1) throw fetchError;
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                        retries--;
+                    }
+                }
+
+                if (!response || !response.ok) {
+                     throw new Error("Failed to connect after retries.");
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    let aiText = candidate.content.parts[0].text;
+                    
+                    // Simple typewriter effect for the output
+                    aiOutput.innerText = '';
+                    let i = 0;
+                    let typingInterval = setInterval(() => {
+                        if (i < aiText.length) {
+                            aiOutput.innerHTML += aiText.charAt(i);
+                            i++;
+                        } else {
+                            clearInterval(typingInterval);
+                        }
+                    }, 30); // Typing speed
+
+                } else {
+                    aiOutput.innerText = "Error: Invalid response format from server.";
+                }
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                aiOutput.innerText = "Connection error. The AI terminal is temporarily offline. Please try again later.";
+            } finally {
+                askAiBtn.disabled = false;
+                askAiBtn.innerText = 'ASK GEMINI';
+            }
         }
 
         function resumeGame() {
@@ -692,6 +875,7 @@
         // Button Listeners
         document.getElementById('start-btn').addEventListener('click', initGame);
         document.getElementById('restart-btn').addEventListener('click', initGame);
+        document.getElementById('exit-btn').addEventListener('click', exitToMenu);
         document.getElementById('resume-btn').addEventListener('click', resumeGame);
 
         // UI Helpers
@@ -699,6 +883,7 @@
             startScreen.classList.add('hidden');
             pauseScreen.classList.add('hidden');
             gameoverScreen.classList.add('hidden');
+            aiScreen.classList.add('hidden');
         }
 
         function showUI(element) {
