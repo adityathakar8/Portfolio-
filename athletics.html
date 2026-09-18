@@ -305,19 +305,32 @@
         </div>
     </div>
     <script>
-        // Try to jump back to the original game tab (which is still paused, exactly where
-        // the player left it) instead of opening a brand new copy of the game. This only
-        // works when this page was opened via the game's popup (so window.opener is set);
-        // if opened directly (e.g. a bookmark), it just falls back to a normal navigation.
+        // Get back to the paused game without losing its state. Checked in order:
+        //
+        // 1. This page is embedded inside the game's own section overlay (an iframe on
+        //    top of the paused game). Same-origin iframes always have a working
+        //    window.parent reference, since Cross-Origin-Opener-Policy (which some hosts,
+        //    including GitHub Pages, send by default and which silently breaks
+        //    window.opener between separate tabs) only applies to top-level popup windows,
+        //    never to iframes. This is the primary, reliable path.
+        // 2. Fallback: this page was opened as its own browser tab and window.opener still
+        //    happens to be available. Not guaranteed on every host/browser, but harmless
+        //    to try.
+        // 3. Last resort: just navigate to the game fresh.
         function backToGame() {
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.closeSectionOverlay === 'function') {
+                    window.parent.closeSectionOverlay();
+                    return false;
+                }
+            } catch (e) {}
+
             if (window.opener && !window.opener.closed) {
                 try {
                     window.opener.focus();
                 } catch (e) {}
                 window.close();
 
-                // Some browsers refuse to let scripts close tabs they didn't open themselves.
-                // If we're still here after a moment, fall back to a normal navigation.
                 setTimeout(function () {
                     window.location.href = 'index.html';
                 }, 300);

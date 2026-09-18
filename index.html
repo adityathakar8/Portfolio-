@@ -146,6 +146,16 @@
 
     </div>
 
+    <!-- Section Overlay: shows portfolio section pages inline, over the paused game,
+         instead of opening a new tab. This is deliberate: some hosts (GitHub Pages
+         included) send security headers that sever window.opener between tabs, which
+         made "return to game" unreliable. An in-page iframe sidesteps that entirely,
+         since it never actually leaves this page. -->
+    <div id="section-overlay" class="hidden" style="position:fixed; inset:0; z-index:200; background:#000;">
+        <button id="overlay-back-btn" class="pixel-btn" style="position:fixed; top:14px; left:14px; z-index:201; font-size:11px; padding:10px 14px; background-color:#38bdf8; border-color:#0369a1; color:#000; margin-top:0;">&larr; BACK TO GAME</button>
+        <iframe id="section-iframe" src="about:blank" title="Portfolio section" style="width:100%; height:100%; border:none; display:block;"></iframe>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on base canvas
@@ -625,6 +635,7 @@
         }
 
         function initGame() {
+            closeSectionOverlay(); // safety net, in case a section overlay was left open
             bird.y = 150;
             bird.velocity = 0;
             pipes.items = [];
@@ -661,6 +672,7 @@
         }
 
         function exitToMainMenu() {
+            closeSectionOverlay(); // safety net, in case a section overlay was left open
             // Reset the world so the start screen isn't sitting behind a crashed run
             bird.y = 150;
             bird.velocity = 0;
@@ -680,30 +692,45 @@
             // Update the UI dynamically based on the cloud hit
             document.getElementById('section-title').innerText = sectionData.name.toUpperCase();
             
-            // Set the actual anchor tag URL. 
-            // The user clicking this makes it a "Trusted Event", bypassing browser blocks!
             let viewLink = document.getElementById('view-section-link');
-
-            // Every section (local page or external link) opens in a NEW tab.
-            // This keeps the game running untouched in the original tab, so the
-            // player's run isn't lost just because they went to check out a section.
-            viewLink.href = sectionData.external ? sectionData.url : (sectionData.id + '.html');
-            viewLink.target = '_blank';
+            viewLink.innerText = "OPEN " + sectionData.name.toUpperCase();
 
             if (sectionData.external) {
-                // Third-party links (Resume, etc.) should never get a reference back to us
+                // External links (Resume, etc.) still open as a real new tab: they're
+                // third-party pages we can't embed, and they should never get a reference
+                // back to us anyway.
+                viewLink.href = sectionData.url;
+                viewLink.target = '_blank';
                 viewLink.rel = 'noopener noreferrer';
+                viewLink.onclick = null;
             } else {
-                // Local section pages intentionally keep window.opener set, so the section
-                // page's "Back to Game" button can jump back to this exact tab and resume
-                // the paused run, instead of opening a fresh copy of the game.
+                // Local section pages open inline in an overlay on top of the paused game,
+                // instead of a separate browser tab. Some hosts (GitHub Pages included) send
+                // security headers that sever window.opener between tabs, which made a
+                // tab-based "return to game" unreliable across browsers. An in-page iframe
+                // sidesteps that entirely, since the game is never actually left.
+                let url = sectionData.id + '.html';
+                viewLink.href = url; // kept as a real link too, so ctrl/cmd-click still opens a normal tab if wanted
+                viewLink.target = '_blank';
                 viewLink.removeAttribute('rel');
+                viewLink.onclick = function(e) {
+                    e.preventDefault();
+                    openSectionOverlay(url);
+                };
             }
-
-            viewLink.innerText = "OPEN " + sectionData.name.toUpperCase();
 
             // Show pause UI 
             showUI(pauseScreen);
+        }
+
+        function openSectionOverlay(url) {
+            document.getElementById('section-iframe').src = url;
+            document.getElementById('section-overlay').classList.remove('hidden');
+        }
+
+        function closeSectionOverlay() {
+            document.getElementById('section-overlay').classList.add('hidden');
+            document.getElementById('section-iframe').src = 'about:blank';
         }
 
         function resumeGame() {
@@ -745,6 +772,7 @@
         document.getElementById('restart-btn').addEventListener('click', initGame);
         document.getElementById('exit-btn').addEventListener('click', exitToMainMenu);
         document.getElementById('resume-btn').addEventListener('click', resumeGame);
+        document.getElementById('overlay-back-btn').addEventListener('click', closeSectionOverlay);
 
         // UI Helpers
         function hideAllUI() {
