@@ -96,7 +96,7 @@
     <div class="scanlines"></div>
     <div class="page-wrap">
         <div class="pixel-panel">
-            <a href="index.html" class="pixel-btn mb-6" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">&larr; BACK TO GAME</a>
+            <a href="index.html" onclick="return backToGame();" class="pixel-btn mb-6" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">&larr; BACK TO GAME</a>
             <h1 class="text-xl md:text-3xl text-yellow-300 mt-6 mb-2">SKILLS</h1>
             <p class="text-xs md:text-sm text-gray-200 mb-4">Inventory: the toolkit picked up along the way.</p>
         </div>
@@ -140,8 +140,31 @@
             </div>
         </div>
         <div class="text-center mb-10">
-            <a href="index.html" class="pixel-btn" style="background-color:#f6d03c;">&larr; BACK TO GAME</a>
+            <a href="index.html" onclick="return backToGame();" class="pixel-btn" style="background-color:#f6d03c;">&larr; BACK TO GAME</a>
         </div>
     </div>
+    <script>
+        // Try to jump back to the original game tab (which is still paused, exactly where
+        // the player left it) instead of opening a brand new copy of the game. This only
+        // works when this page was opened via the game's popup (so window.opener is set);
+        // if opened directly (e.g. a bookmark), it just falls back to a normal navigation.
+        function backToGame() {
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.focus();
+                } catch (e) {}
+                window.close();
+
+                // Some browsers refuse to let scripts close tabs they didn't open themselves.
+                // If we're still here after a moment, fall back to a normal navigation.
+                setTimeout(function () {
+                    window.location.href = 'index.html';
+                }, 300);
+            } else {
+                window.location.href = 'index.html';
+            }
+            return false;
+        }
+    </script>
 </body>
 </html>
