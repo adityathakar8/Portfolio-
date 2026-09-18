@@ -139,6 +139,7 @@
             <p id="score-display" class="text-sm text-white mb-6">Score: 0</p>
             <div class="flex flex-col gap-4 w-full">
                 <button id="restart-btn" class="pixel-btn w-full !mt-0 box-border">RESTART GAME</button>
+                <a id="gameover-resume-link" href="#" target="_blank" rel="noopener noreferrer" class="pixel-btn w-full !mt-0 box-border text-center" style="background-color:#38bdf8;border-color:#0369a1;color:#000;">VIEW RESUME</a>
                 <button id="exit-btn" class="pixel-btn w-full !mt-0 box-border" style="background-color:#f87171;border-color:#991b1b;color:#000;">EXIT TO MAIN MENU</button>
             </div>
         </div>
@@ -170,7 +171,7 @@
             { name: "Education", id: "education" },
             { name: "Work Experience", id: "experience" },
             { name: "Athletics", id: "athletics" },
-            { name: "Projects", id: "creative" },
+            { name: "Projects", id: "projects" },
             { name: "Skills", id: "skills" },
             { name: "Contact", id: "contact" },
             { name: "Resume", id: "resume", external: true, url: "https://docs.google.com/document/d/1eLqIUeWNAmaku40NTP27kYuph7aF53R05nPFQZVRn4k/edit?usp=sharing" }
@@ -184,7 +185,7 @@
 
         // Recurring order that section clouds are spawned in.
         // "Skills" appears twice per cycle since it's evergreen; Resume, Contact, and About are mixed in too.
-        const CLOUD_SEQUENCE = ["about", "education", "skills", "creative", "athletics", "experience", "skills", "contact", "resume"];
+        const CLOUD_SEQUENCE = ["about", "education", "skills", "projects", "athletics", "experience", "skills", "contact", "resume"];
 
         // State Machine
         let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER
@@ -245,24 +246,47 @@
                     ctx.drawImage(this.topSprite, p.x, p.y);
                     
                     // Draw bottom pipe
-                    ctx.drawImage(this.bottomSprite, p.x, p.y + p.height + PIPE_GAP);
+                    ctx.drawImage(this.bottomSprite, p.x, p.y + p.height + p.gap);
                 }
             },
             
             update: function() {
                 // Add new pipes
                 if (frames % PIPE_SPAWN_RATE === 0) { 
-                    // Determine random Y position for top pipe
-                    // It should be negative to hide the top part
-                    let maxYPos = -10;
-                    let minYPos = -this.topSprite.height + 50; 
-                    let yPos = Math.floor(Math.random() * (maxYPos - minYPos + 1) + minYPos);
+                    // Work out how much vertical play space actually exists on this screen
+                    // (from the very top down to where the ground starts).
+                    let playableHeight = ground.y > 0 ? ground.y : canvas.height - ground.height;
+
+                    // Guarantee a comfortable gap: at least 30% of the playable height, or the
+                    // configured PIPE_GAP, whichever is bigger. On short mobile viewports this
+                    // stops pipes from swallowing almost the entire screen and leaving only a
+                    // sliver of room near the ground.
+                    let effectiveGap = Math.max(PIPE_GAP, playableHeight * 0.30);
+
+                    // Keep a small buffer so the gap never sits flush against the very top of
+                    // the screen or right on top of the ground.
+                    let edgeMargin = Math.min(60, playableHeight * 0.08);
+
+                    let minGapCenter = edgeMargin + effectiveGap / 2;
+                    let maxGapCenter = playableHeight - edgeMargin - effectiveGap / 2;
+
+                    // Fallback for extremely short screens where the math above would invert
+                    if (maxGapCenter < minGapCenter) {
+                        let mid = playableHeight / 2;
+                        minGapCenter = mid;
+                        maxGapCenter = mid;
+                    }
+
+                    let gapCenterY = minGapCenter + Math.random() * (maxGapCenter - minGapCenter);
+                    let gapTop = gapCenterY - effectiveGap / 2; // where the top pipe should end
+                    let yPos = gapTop - this.topSprite.height;  // top pipe's y so its bottom edge lands on gapTop
                     
                     this.items.push({
                         x: canvas.width,
                         y: yPos,
                         width: PIPE_WIDTH,
                         height: this.topSprite.height,
+                        gap: effectiveGap,
                         passed: false
                     });
 
@@ -316,7 +340,7 @@
                     }
                     // Bottom pipe
                     if (bird.x + bird.width > p.x && bird.x < p.x + p.width && 
-                        bird.y + bird.height > p.y + p.height + PIPE_GAP) {
+                        bird.y + bird.height > p.y + p.height + p.gap) {
                         triggerGameOver();
                     }
 
@@ -628,6 +652,11 @@
         function triggerGameOver() {
             gameState = 'GAMEOVER';
             scoreDisplay.innerText = "Score: " + score;
+
+            // Wire the resume button to whatever URL the Resume section is configured with,
+            // so there's a single source of truth if that link ever changes.
+            document.getElementById('gameover-resume-link').href = SECTIONS_BY_ID['resume'].url;
+
             showUI(gameoverScreen);
         }
 
@@ -660,7 +689,16 @@
             // player's run isn't lost just because they went to check out a section.
             viewLink.href = sectionData.external ? sectionData.url : (sectionData.id + '.html');
             viewLink.target = '_blank';
-            viewLink.rel = 'noopener noreferrer';
+
+            if (sectionData.external) {
+                // Third-party links (Resume, etc.) should never get a reference back to us
+                viewLink.rel = 'noopener noreferrer';
+            } else {
+                // Local section pages intentionally keep window.opener set, so the section
+                // page's "Back to Game" button can jump back to this exact tab and resume
+                // the paused run, instead of opening a fresh copy of the game.
+                viewLink.removeAttribute('rel');
+            }
 
             viewLink.innerText = "OPEN " + sectionData.name.toUpperCase();
 
